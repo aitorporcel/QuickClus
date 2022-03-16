@@ -1,3 +1,5 @@
+## QuickClus
+
 QuickClus is a Python module for clustering categorical and numerical data using [UMAP](https://github.com/lmcinnes/umap) and [HDBSCAN](https://github.com/scikit-learn-contrib/hdbscan). 
 QuickClus allows incorporating numerical and categorical values (even with null values) into the clustering, in a simple and fast way. The imputation of null values, the scaling and transformation of numerical variables, and the combination of categorical variables are performed automatically.
 
