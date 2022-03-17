@@ -23,7 +23,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 
 from quickclus.utils import *
 
-#Logs---------------------------------------------------------------------------------------
+#Logs
 logger = logging.getLogger("quickclus")
 logger.setLevel(logging.ERROR)
 sh = logging.StreamHandler()
@@ -32,9 +32,10 @@ sh.setFormatter(
 )
 logger.addHandler(sh)
 
-#QuickClus-------------------------------------------------------------------------------------
+
 class QuickClus(BaseEstimator, ClassifierMixin):
     """QuickClus
+    
     Creates UMAP embeddings and HDSCAN clusters from a pandas DataFrame with mixed data
 
     Parameters
@@ -64,7 +65,7 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
         threshold_combine_rare_levels: float, default = 0.02
             To avoid an excessive increase in dimensionality when transforming
-            categorical variables into-one hot encoding, rare levels can be combined. 
+            categorical variables into-one hot encoding, rare levels can be combined.
             This value indicates the minimum proportion of a category
             that should not be combined into "other".
 
@@ -76,19 +77,16 @@ class QuickClus(BaseEstimator, ClassifierMixin):
             number of features.
 
         imputer_strategy_numerical: str, default = "mean"
-            Imputation strategy for numerical variables. 
-            The values can be: 
-                "mean", "median", "most_frequent"
+            Imputation strategy for numerical variables.
+            The values can be: "mean", "median", "most_frequent"
 
         scaler_type_numerical: str, default = "standard"
-            Scaler strategy for numerical variables. 
-            The values can be:  
-                "robust" (RobustScaler), "standard" (StandardScaler)
+            Scaler strategy for numerical variables.
+            The values can be: "robust" (RobustScaler), "standard" (StandardScaler)
 
         transformation_type_numerical: str, default = "power"
-            Scaler strategy for numerical variables. 
-            The values can be: 
-                "power" (PowerTransformer), "quantile" (QuantileTransformer)
+            Scaler strategy for numerical variables.
+            The values can be: "power" (PowerTransformer), "quantile" (QuantileTransformer)
 
         umap_combine_method: str, default = "intersection"
             Method by which to combine embeddings spaces.
@@ -96,11 +94,10 @@ class QuickClus(BaseEstimator, ClassifierMixin):
             intersection_union_mapper
             The latter combines both the intersection and union of
             the embeddings.
-            See:
-                https://umap-learn.readthedocs.io/en/latest/composing_models.html
+            See: https://umap-learn.readthedocs.io/en/latest/composing_models.html
 
         n_neighbors_intersection_union: int, default = None
-            Level of neighbors for UMAP to use to combine umaps embeddings 
+            Level of neighbors for UMAP to use to combine umaps embeddings
             if umap_combine_method = "intersection_union_mapper"
             If None, n_neighbors_intersection_union = n_neighbors
 
@@ -165,11 +162,14 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
 
     def fit(self, df: pd.DataFrame) -> None:
-        """Fit function for call UMAP and HDBSCAN
+        """
+        Fit function for call UMAP and HDBSCAN
+
         Parameters
         ----------
             df : pandas DataFrame
                 DataFrame object with named columns of categorical and numerics
+
         Returns
         -------
             Fitted: None
@@ -234,6 +234,7 @@ class QuickClus(BaseEstimator, ClassifierMixin):
         ----------
             data : pandas DataFrame
                 DataFrame object with named columns of categorical and numerics
+
         Returns
         -------
             categorical_data: pandas DataFrame
@@ -248,8 +249,7 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
     def _preprocess_categorical_data(self):
         """
-        Preprocess the categorical data: 
-            Rare level combination, na imputation with the mode and one hot encoding
+        Preprocess the categorical data: Rare level combination, na imputation with the mode and one hot encoding
         
         Parameters
         ----------
@@ -348,6 +348,7 @@ class QuickClus(BaseEstimator, ClassifierMixin):
         ----------
             data : pandas DataFrame
                 DataFrame object with named columns of categorical and numerics
+
         Returns
         -------
             numerical_data: pandas DataFrame
@@ -455,7 +456,6 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
 
     def _combine_umap_data(self):
-
         """
         Combines the numerical and categorical data embeddings
         
@@ -468,22 +468,22 @@ class QuickClus(BaseEstimator, ClassifierMixin):
                 categorical data embedding
 
             self.umap_combine_method: str
-                method to combine the embeddings 
+                method to combine the embeddings
                 (intersection/union/contrast/intersection_union_mapper)
 
             self.n_neighbors_intersection_union: int
-                if umap_combine_method = intersection_union_mapper, 
+                if umap_combine_method = intersection_union_mapper,
                 number of components UMAP
 
             self.n_components: int
-                if umap_combine_method = intersection_union_mapper, 
+                if umap_combine_method = intersection_union_mapper,
                 number of components UMAP
 
             self.random_state: int
                 seed
 
             self.preprocessed_num: scipy.sparse.csr.csr_matrix
-                if umap_combine_method = intersection_union_mapper, 
+                if umap_combine_method = intersection_union_mapper,
                 matrix with preprocessed numerical data
 
         Returns
@@ -552,14 +552,14 @@ class QuickClus(BaseEstimator, ClassifierMixin):
         return self
 
 
-#Visualization-----------------------------------------------------------------------------
+#Visualization
     def plot_condensed_tree(self):
         """
         Plots the condensed tree of the model
         
         Parameters
         ----------
-            self.hdb_model : hdbscan.hdbscan_.HDBSCAN
+            self.hdb_model:
                 hdbscan model
 
         Returns
@@ -582,10 +582,10 @@ class QuickClus(BaseEstimator, ClassifierMixin):
         
         Parameters
         ----------
-            self.hdb_model : hdbscan.hdbscan_.HDBSCAN
+            self.hdb_model:
                 hdbscan model
 
-            self.umap_embedding: umap.umap_.UMAP
+            self.umap_embedding:
                 data's umap embedding
 
         Returns
@@ -613,7 +613,7 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
 
 
-    #data visualization---------------------------------------------------------------
+#data visualization
     def assing_results(self, data):
         """
         Assings hdb_model's labels to the original data
@@ -675,10 +675,9 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
         return df_summary
 
-#Optimize model-----------------------------------------------------------------------
+#Optimize model
     def tune_model(self, n_trials = 100, min_cluster_start = 3, min_cluster_end = 30,
                     min_samples_start = 3, min_samples_end = 30, max_epsilon = None):
-
         """
         Tunes a hdbscan model maximizing the DBCV score
 
@@ -705,8 +704,8 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
         Returns
         -------
-            None: self.hdbscan_
-                optimized hdbscan_
+            None:
+                optimized hdbscan
         """
         # 1. Define an objective function to be maximized.
         def objective(trial):
