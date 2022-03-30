@@ -5,8 +5,8 @@ with open("README.md", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name = "QuickClust",
-    version = "0.0.2",
+    name = "QuickClus",
+    version = "0.0.3",
     author = "Aitor Porcel Laburu",
     description = "UMAP + HDBSCAN for numeric and/or categorical variables",
     long_description = long_description,

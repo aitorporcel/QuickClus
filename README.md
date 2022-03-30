@@ -33,9 +33,14 @@ clf.cluster_summary(results)
 
 ```
 
+
+## Documentation
+[https://quickclus.readthedocs.io/](https://quickclus.readthedocs.io/en/latest/source/api/quickclus.html)
+
+
 ## Examples
 
-TO DO
+[Notebook with an example of use](https://github.com/aitorporcel/QuickClus/blob/master/notebooks/01_QuickClus_Example.ipynb)
 
 ## References
 
