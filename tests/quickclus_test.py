@@ -93,8 +93,8 @@ class QuickClusTestCase(unittest.TestCase):
 
     def test_hdbscan_optimization(self):
         self.clf.fit(self.df)
-        self.clf.tune_model(n_trials = 5, min_cluster_start = 3, min_cluster_end = 30,
-                    min_samples_start = 3, min_samples_end = 30, max_epsilon = None)
+        self.clf.tune_model(n_trials = 5, min_cluster_start = 0.01, min_cluster_end = 0.05,
+                    min_samples_start = 0.01, min_samples_end = 0.05, max_epsilon = None)
         self.assertEqual(self.clf.hdbscan_.labels_.shape[0], self.df.shape[0])
 
     def test_quickclus_fit_is_df(self):

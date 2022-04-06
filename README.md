@@ -40,7 +40,7 @@ clf.cluster_summary(results)
 
 ## Examples
 
-[Notebook with an example of use](https://github.com/aitorporcel/QuickClus/blob/master/notebooks/01_QuickClus_Example.ipynb)
+[Notebooks with examples of use](https://github.com/aitorporcel/QuickClus/blob/master/notebooks)
 
 ## References
 

@@ -310,7 +310,7 @@ class QuickClus(BaseEstimator, ClassifierMixin):
                 categorical umap embedding
 
         """
-        #TODO: It makes sense to use dice instead of jaccard? Check
+        #TODO: In some cases dice doesn't work. Check why.
 
         logger.info(f"Preprocessed categorical data shape: {self.preprocessed_categorical_.shape}")
 
@@ -634,9 +634,9 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
         return results
 
-    def cluster_summary(self, results_df, metric = "mean"):
+    def cluster_summary(self, results_df, metric = "mean", include_cat = False):
         """
-        Creates a cluster's summary of the numerical features
+        Creates a cluster's summary of the numerical and/or categorical features
 
         Parameters
         ----------
@@ -645,6 +645,9 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
             metric: str, default = "mean"
                 metric to use in the summary (mean/median/max/min)
+
+            include_cat: bool, default = False
+                include the mode of the categorical variables
 
         Returns
         -------
@@ -671,32 +674,123 @@ class QuickClus(BaseEstimator, ClassifierMixin):
             return None
 
         #merge all the results
-        df_summary = prop_cluster.merge(count_cluster, left_index=True, right_index=True).merge(summary_data, left_index=True, right_index=True)
+        df_summary = prop_cluster.merge(count_cluster, left_index = True, right_index = True).merge(summary_data, left_index = True, right_index = True)
+
+        if include_cat:
+            #Calculates the mode of the categorical variables
+            categoricals_col = results_df.select_dtypes(exclude = ["float", "int", "datetime"]).columns.tolist()
+            df_summary_cat = results_df[categoricals_col + ["Cluster"]].groupby(["Cluster"]).agg(pd.Series.mode)
+            df_summary = df_summary.merge(df_summary_cat, left_index = True, right_index = True)
 
         return df_summary
 
-#Optimize model
-    def tune_model(self, n_trials = 100, min_cluster_start = 3, min_cluster_end = 30,
-                    min_samples_start = 3, min_samples_end = 30, max_epsilon = None):
+
+    def describe_cluster(self, results_df, clusters = [0], columns_analyze_numerical = [],
+                    columns_analyze_categorical = [], metric = "mean"):
         """
-        Tunes a hdbscan model maximizing the DBCV score
+        Describes the selected clusters
+
+        Parameters
+        ----------
+            results_df : pandas.DataFrame
+                pandas dataframe with a cluster column
+
+            clusters: list
+                list with clusters to describe (int)
+
+            columns_analyze_numerical: list
+                list of numerical columns to describe
+
+            columns_analyze_categorical: list
+                list of categorical columns to describe
+
+            metric: str, default = "mean"
+                metric to use in the summary of numerical columns (mean/median)
+
+
+        Returns
+        -------
+            None: None
+
+        """
+
+        total_rows = results_df.shape[0]
+
+        #Iterate over the selected_clusters
+        for selected_cluster in clusters:
+
+            cluster_results = results_df[results_df["Cluster"] == selected_cluster]
+
+            print(f"Analysis of cluster {selected_cluster}:")
+
+            rows_cluster = cluster_results.shape[0]
+            percentage_cluster = (rows_cluster/total_rows) * 100
+            print(f"The cluster {selected_cluster} has {rows_cluster} rows ({percentage_cluster:.2f}% of total).")
+
+            #Analyze the numerical columns if exists
+            if len(columns_analyze_numerical) > 0:
+                if metric == "mean":
+                    for n_col in columns_analyze_numerical:
+                        col_mean = results_df[n_col].mean()
+                        col_cluster = cluster_results[n_col].mean()
+
+                        variation = (col_cluster - col_mean)/col_mean
+
+                        print(f"The average {n_col} in the dataset is {col_mean:.2f} and in the cluster {selected_cluster} is {col_cluster:.2f} ({variation * 100:+.1f}%).")
+
+                elif metric == "median":
+                    for n_col in columns_analyze_numerical:
+                        col_median = results_df[n_col].median()
+                        col_cluster = cluster_results[n_col].median()
+
+                        variation = (col_cluster - col_median)/col_median
+
+                        print(f"The median {n_col} in the dataset is {col_median:.2f} and in the cluster {selected_cluster} is {col_cluster:.2f} ({variation * 100:+.1f}%).")
+
+                else:
+                    print("Select a valid metric (mean/median)")
+
+            #Analyze the categorical columns if exists
+            if len(columns_analyze_categorical) > 0:
+                for n_col in columns_analyze_categorical:
+                    col_mode = results_df[n_col].value_counts(normalize = True, dropna = False).sort_values(ascending = False)
+                    col_mode_cat, col_mode_value = col_mode.index[0], col_mode[0] * 100
+
+                    col_cluster = cluster_results[n_col].value_counts(normalize = True, dropna = False).sort_values(ascending = False)
+                    clus_mode_cat, clus_mode_value = col_cluster.index[0], col_cluster[0] * 100
+
+
+                    print(f"The most common value of the column {n_col} in the dataset is {col_mode_cat} ({col_mode_value:.1f}%) and in the cluster {selected_cluster} is {clus_mode_cat} ({clus_mode_value:.1f}%).")
+
+
+
+            print("\n")
+
+        return None   
+
+#Optimize model
+    def tune_model(self,
+                    n_trials = 100, min_cluster_start = 0.01, min_cluster_end = 0.15,
+                    min_samples_start = 0.01, min_samples_end = 0.15, max_epsilon = None):
+        """
+        Tunes a hdbscan model maximizing the DBCV score (https://www.dbs.ifi.lmu.de/~zimek/publications/SDM2014/DBCV.pdf)
 
         Parameters
         ----------
             n_trials : int, default = 100
                 number of iterations
 
-            min_cluster_start: int, default = 3
-                lowest value of min_cluster of the search space
+            min_cluster_start: float, default = 0.01
+                lowest value of min_cluster of the search space (proportion of data)
 
-            min_cluster_end: int, default = 30
-                highest value of min_cluster of the search space
+            min_cluster_end: float, default = 0.15
+                highest value of min_cluster of the search space (proportion of data)
 
-            min_samples_start: int, default = 3
-                lowest value of min_samples of the search space
+            min_samples_start: float, default = 0.01
+                lowest value of min_samples of the search space (proportion of data)
 
-            min_samples_end: int, default = 30
-                highest value of min_samples of the search space      
+            min_samples_end: float, default = 0.15
+                highest value of min_samples of the search space (proportion of data)
 
             max_epsilon: float, default = None
                 If a value is provided, an optimal epsilon is searched
@@ -707,12 +801,28 @@ class QuickClus(BaseEstimator, ClassifierMixin):
             None:
                 optimized hdbscan
         """
+
+        n_rows = self.umap_combined.embedding_.shape[0]
+
+        #Check values:
+        assert 0 <= min_cluster_start <= 1, "min_cluster_start must be between 0 and 1"
+        assert 0 <= min_cluster_end <= 1, "min_cluster_end must be between 0 and 1"
+        assert 0 <= min_samples_start <= 1, "min_samples_start must be between 0 and 1"
+        assert 0 <= min_samples_end <= 1, "min_samples_end must be between 0 and 1"
+
+
+        min_cluster_start_value = n_rows * min_cluster_start
+        min_cluster_end_value = n_rows * min_cluster_end
+
+        min_samples_start_value = n_rows * min_samples_start
+        min_samples_end_value = n_rows * min_samples_end
+
         # 1. Define an objective function to be maximized.
         def objective(trial):
 
             # 2. Suggest values for the hyperparameters using a trial object.
-            min_cluster_number = trial.suggest_int("min_cluster", min_cluster_start, min_cluster_end, log = True)
-            min_samples_number = trial.suggest_int("min_samples", min_samples_start, min_samples_end, log = True)
+            min_cluster_number = trial.suggest_int("min_cluster", min_cluster_start_value, min_cluster_end_value, log = False)
+            min_samples_number = trial.suggest_int("min_samples", min_samples_start_value, min_samples_end_value, log = False)
             
             if max_epsilon is not None:
                 cluster_selection_epsilon_number = trial.suggest_float("cluster_selection_epsilon", 0, max_epsilon)
