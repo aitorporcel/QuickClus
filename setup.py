@@ -6,7 +6,7 @@ with open("README.md", encoding="utf-8") as fh:
 
 setuptools.setup(
     name = "QuickClus",
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Aitor Porcel Laburu",
     description = "UMAP + HDBSCAN for numeric and/or categorical variables",
     long_description = long_description,

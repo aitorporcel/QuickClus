@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 import matplotlib.pyplot as plt
-from matplotlib.pyplot import figure
+import matplotlib.cm as cm
 import seaborn as sns
 
 from sklearn.pipeline import Pipeline
@@ -14,7 +14,6 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder, RobustScaler, PowerTransformer, StandardScaler, QuantileTransformer
 
 import umap
-import umap.plot
 
 import hdbscan
 import optuna
@@ -273,7 +272,7 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
         #Use a simple imputer with the mode and one hot encoding
         imputer_cat = SimpleImputer(strategy = "most_frequent")
-        one_hot = OneHotEncoder(categories = "auto", drop = "first", handle_unknown = "ignore")
+        one_hot = OneHotEncoder(categories = "auto", handle_unknown = "ignore")
 
         #Create the pipeline and transform the data
         categorical_pipeline = Pipeline([("imputer", imputer_cat),
@@ -568,7 +567,7 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
         """
 
-        figure(figsize = (10, 8), dpi = 80)
+        plt.figure(figsize = (10, 8), dpi = 80)
 
         _ = self.hdbscan_.condensed_tree_.plot(
         select_clusters = True,
@@ -606,8 +605,26 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
     def plot_2d_labels(self):
         if self.umap_combined.embedding_.shape[1] == 2:
-            umap.plot.points(self.umap_combined, labels = self.hdbscan_.labels_,
-                    color_key_cmap = 'Paired', background = 'black', show_legend = True)
+            fig, ax = plt.subplots(figsize=(10, 8))
+            unique_labels = np.unique(self.hdbscan_.labels_)
+
+            #colors = ["red", "blue", "green", "yellow"]
+            colors = cm.rainbow(np.linspace(0, 1, len(unique_labels)))
+
+            for i, label in enumerate(unique_labels):
+                mask_label = self.hdbscan_.labels_ == label
+                ax.scatter(self.umap_combined.embedding_[:,0][mask_label],
+                                    self.umap_combined.embedding_[:,1][mask_label],
+                                    color=colors[i],
+                                    alpha=0.5,
+                                    s=6,
+                                    label=label)
+
+            ax.legend(fontsize=8, markerscale=1)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            return fig
+            
         else:
             print("This function works only with 2d embeddings")
 
