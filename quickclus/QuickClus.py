@@ -110,7 +110,7 @@ class QuickClus(BaseEstimator, ClassifierMixin):
                 n_neighbors: int = 15,
                 min_cluster_size: int = 15,
                 min_samples: int = None,
-                threshold_combine_rare_levels: float = 0.02,
+                threshold_combine_rare_levels: float = 0.00,
                 n_components: int = None,
                 scaler_type_numerical: str = "standard",
                 imputer_strategy_numerical: str = "mean",
@@ -266,8 +266,12 @@ class QuickClus(BaseEstimator, ClassifierMixin):
         """
 
         #Combine rare levels into "other"
-        for category in self.categorical_.columns:
-            self.categorical_[category] = self.categorical_[category].mask(self.categorical_[category].map(self.categorical_[category].value_counts(normalize = True)) <= self.threshold_combine_rare_levels, 'Other')
+        if self.threshold_combine_rare_levels > 0:
+            for category in self.categorical_.columns:
+                self.categorical_[category] = self.categorical_[category].\
+                    mask(self.categorical_[category].map(self.categorical_[category].\
+                        value_counts(normalize = True)) <= self.threshold_combine_rare_levels,
+                        'Other')
 
 
         #Use a simple imputer with the mode and one hot encoding
@@ -604,7 +608,9 @@ class QuickClus(BaseEstimator, ClassifierMixin):
             print("The embedding has only 1 dimension, increase it to plot the results")
 
     def plot_2d_labels(self):
-        if self.umap_combined.embedding_.shape[1] == 2:
+        if self.umap_combined.embedding_.shape[1] > 2:
+            print("Plotting only the first two dimensions.")
+        if self.umap_combined.embedding_.shape[1] >= 2:
             fig, ax = plt.subplots(figsize=(10, 8))
             unique_labels = np.unique(self.hdbscan_.labels_)
 
@@ -620,13 +626,14 @@ class QuickClus(BaseEstimator, ClassifierMixin):
                                     s=6,
                                     label=label)
 
-            ax.legend(fontsize=8, markerscale=1)
+            if unique_labels.shape[0] <= 20:
+                ax.legend(fontsize=8, markerscale=1)
             ax.set_xticks([])
             ax.set_yticks([])
             return fig
             
         else:
-            print("This function works only with 2d embeddings")
+            print("This function needs at least 2 dimensions.")
 
 
 
@@ -732,17 +739,21 @@ class QuickClus(BaseEstimator, ClassifierMixin):
         """
 
         total_rows = results_df.shape[0]
+        analysis_clusters = {}
 
         #Iterate over the selected_clusters
         for selected_cluster in clusters:
+            text_cluster_analysis = ""
 
             cluster_results = results_df[results_df["Cluster"] == selected_cluster]
 
-            print(f"Analysis of cluster {selected_cluster}:")
+            #print(f"Analysis of cluster {selected_cluster}:")
+            text_cluster_analysis += f"Analysis of cluster {selected_cluster}:\n"
 
             rows_cluster = cluster_results.shape[0]
             percentage_cluster = (rows_cluster/total_rows) * 100
-            print(f"The cluster {selected_cluster} has {rows_cluster} rows ({percentage_cluster:.2f}% of total).")
+            #print(f"The cluster {selected_cluster} has {rows_cluster} rows ({percentage_cluster:.2f}% of total).")
+            text_cluster_analysis += f"Cluster {selected_cluster} has {rows_cluster} rows ({percentage_cluster:.2f}% of the total).\n"
 
             #Analyze the numerical columns if exists
             if len(columns_analyze_numerical) > 0:
@@ -753,8 +764,9 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
                         variation = (col_cluster - col_mean)/col_mean
 
-                        print(f"The average {n_col} in the dataset is {col_mean:.2f} and in the cluster {selected_cluster} is {col_cluster:.2f} ({variation * 100:+.1f}%).")
-
+                        #print(f"The average {n_col} in the dataset is {col_mean:.2f} and in the cluster {selected_cluster} is {col_cluster:.2f} ({variation * 100:+.1f}%).")
+                        text_cluster_analysis += f"The average {n_col} in the dataset is {col_mean:.2f}, and in cluster {selected_cluster} is {col_cluster:.2f} ({variation * 100:+.1f}%).\n"
+                
                 elif metric == "median":
                     for n_col in columns_analyze_numerical:
                         col_median = results_df[n_col].median()
@@ -762,8 +774,8 @@ class QuickClus(BaseEstimator, ClassifierMixin):
 
                         variation = (col_cluster - col_median)/col_median
 
-                        print(f"The median {n_col} in the dataset is {col_median:.2f} and in the cluster {selected_cluster} is {col_cluster:.2f} ({variation * 100:+.1f}%).")
-
+                        #print(f"The median {n_col} in the dataset is {col_median:.2f} and in the cluster {selected_cluster} is {col_cluster:.2f} ({variation * 100:+.1f}%).")
+                        text_cluster_analysis += f"The median {n_col} in the dataset is {col_median:.2f} and in the cluster {selected_cluster} is {col_cluster:.2f} ({variation * 100:+.1f}%).\n"
                 else:
                     print("Select a valid metric (mean/median)")
 
@@ -777,13 +789,14 @@ class QuickClus(BaseEstimator, ClassifierMixin):
                     clus_mode_cat, clus_mode_value = col_cluster.index[0], col_cluster[0] * 100
 
 
-                    print(f"The most common value of the column {n_col} in the dataset is {col_mode_cat} ({col_mode_value:.1f}%) and in the cluster {selected_cluster} is {clus_mode_cat} ({clus_mode_value:.1f}%).")
+                    #print(f"The most common value of the column {n_col} in the dataset is {col_mode_cat} ({col_mode_value:.1f}%) and in the cluster {selected_cluster} is {clus_mode_cat} ({clus_mode_value:.1f}%).")
+                    text_cluster_analysis += f"The most common value of the column {n_col} in the dataset is {col_mode_cat} ({col_mode_value:.1f}%) and in the cluster {selected_cluster} is {clus_mode_cat} ({clus_mode_value:.1f}%).\n"
 
 
+            #print("\n")
+            analysis_clusters[selected_cluster] = text_cluster_analysis
 
-            print("\n")
-
-        return None   
+        return analysis_clusters   
 
 #Optimize model
     def tune_model(self,
