@@ -10,3 +10,4 @@ setuptools==58.0.4
 plotly==5.4.0
 umap_learn==0.5.1
 joblib==1.1.0
+sphinx=5.0.0
