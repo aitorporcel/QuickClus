@@ -5,6 +5,7 @@ import pytest
 from sklearn.datasets import make_blobs
 from sklearn.preprocessing import KBinsDiscretizer
 import random
+import plotly
 
 import unittest
 
@@ -59,7 +60,7 @@ class QuickClusTestCase(unittest.TestCase):
 
         #Numerical + categorical
         self.clf = QuickClus(
-            n_components = 2,
+            n_components = 3,
             random_state = 42,
             n_neighbors = 10,
             umap_combine_method = "intersection_union_mapper",
@@ -119,6 +120,16 @@ class QuickClusTestCase(unittest.TestCase):
     def test_2d_labels(self):
         self.clf.fit(self.df)
         self.clf.plot_2d_labels()
+
+    def test_2d_labels_plotly(self):
+        self.clf.fit(self.df)
+        fig = self.clf.plot_2d_labels(plot_lib = "plotly", data = self.df)
+        self.assertTrue(isinstance(fig, plotly.graph_objs._figure.Figure))
+
+    def test_3d_labels_plotly(self):
+        self.clf.fit(self.df)
+        fig = self.clf.plot_3d_labels(data = self.df)
+        self.assertTrue(isinstance(fig, plotly.graph_objs._figure.Figure))
 
     def test_assing_results(self):
         self.clf.fit(self.df)

@@ -6,7 +6,7 @@ with open("README.md", encoding="utf-8") as fh:
 
 setuptools.setup(
     name = "QuickClus",
-    version = "0.1.2",
+    version = "0.1.3",
     author = "Aitor Porcel Laburu",
     description = "UMAP + HDBSCAN for numeric and/or categorical variables",
     long_description = long_description,
@@ -30,6 +30,7 @@ setuptools.setup(
         "matplotlib>=3.5.0",
         "optuna>=2.10.0",
         "seaborn>=0.11.2",
+        "plotly>=5.4.0"
     ],
 )
 

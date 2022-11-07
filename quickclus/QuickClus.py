@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import seaborn as sns
+import plotly.express as px
 
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
@@ -607,33 +608,110 @@ class QuickClus(BaseEstimator, ClassifierMixin):
         else:
             print("The embedding has only 1 dimension, increase it to plot the results")
 
-    def plot_2d_labels(self):
+    def plot_2d_labels(self, plot_lib = "matploblib", data = None):
+        """
+        Plot the first two dimensions of the final embedding with the final clusters.
+        
+        Parameters
+        ----------
+            plot_lib: str
+                plot library to use (plotly, matplotlib)
+            data: pd.Dataframe
+                pandas dataframe with the original data to show in the plot. Only used if plot_lib = "plotly"
+
+        Returns
+        -------
+            fig: figure
+                plotly fig or matplotlib
+
+        """
         if self.umap_combined.embedding_.shape[1] > 2:
             print("Plotting only the first two dimensions.")
         if self.umap_combined.embedding_.shape[1] >= 2:
-            fig, ax = plt.subplots(figsize=(10, 8))
-            unique_labels = np.unique(self.hdbscan_.labels_)
+            if plot_lib == "plotly":
+                aux_df = data.copy()
+                aux_df["UMAP_1"] = self.umap_combined.embedding_[:, 0]
+                aux_df["UMAP_2"] = self.umap_combined.embedding_[:, 1]
 
-            #colors = ["red", "blue", "green", "yellow"]
-            colors = cm.rainbow(np.linspace(0, 1, len(unique_labels)))
+                if "Cluster" not in aux_df.columns:
+                    aux_df["Cluster"] = self.hdbscan_.labels_
+                    
+                aux_df["Cluster"] = aux_df["Cluster"].astype("str")
+                custom_columns = [c for c in aux_df.columns if c not in ["UMAP_1", "UMAP_2"]]
+                custom_hover = [f"{c}: %{{customdata[{i}]}}" for i, c in enumerate(custom_columns)]
 
-            for i, label in enumerate(unique_labels):
-                mask_label = self.hdbscan_.labels_ == label
-                ax.scatter(self.umap_combined.embedding_[:,0][mask_label],
-                                    self.umap_combined.embedding_[:,1][mask_label],
-                                    color=colors[i],
-                                    alpha=0.5,
-                                    s=6,
-                                    label=label)
+                fig = px.scatter(aux_df, x = "UMAP_1", y = "UMAP_2", color = "Cluster",
+                            custom_data = custom_columns, height=800, width=800)
+                fig.update_traces(
+                    hovertemplate="<br>".join(custom_hover)
+                )
+            
+            else:
+                fig, ax = plt.subplots(figsize=(10, 8))
+                unique_labels = np.unique(self.hdbscan_.labels_)
 
-            if unique_labels.shape[0] <= 20:
-                ax.legend(fontsize=8, markerscale=1)
-            ax.set_xticks([])
-            ax.set_yticks([])
+                colors = cm.rainbow(np.linspace(0, 1, len(unique_labels)))
+
+                for i, label in enumerate(unique_labels):
+                    mask_label = self.hdbscan_.labels_ == label
+                    ax.scatter(self.umap_combined.embedding_[:,0][mask_label],
+                                        self.umap_combined.embedding_[:,1][mask_label],
+                                        color=colors[i],
+                                        alpha=0.5,
+                                        s=6,
+                                        label=label)
+
+                if unique_labels.shape[0] <= 20:
+                    ax.legend(fontsize=8, markerscale=1)
+                ax.set_xticks([])
+                ax.set_yticks([])
             return fig
             
         else:
             print("This function needs at least 2 dimensions.")
+
+
+
+    def plot_3d_labels(self, data):
+        """
+        Plot the first three dimensions of the final embedding with the final clusters.
+        
+        Parameters
+        ----------
+            data: pd.Dataframe
+                pandas dataframe with the original data to show in the plot.
+
+        Returns
+        -------
+            fig: plotly.graph_objs._figure.Figure
+                plotly fig
+
+        """
+        if self.umap_combined.embedding_.shape[1] > 3:
+            print("Plotting only the first three dimensions.")
+        if self.umap_combined.embedding_.shape[1] >= 3:
+            aux_df = data.copy()
+            aux_df["UMAP_1"] = self.umap_combined.embedding_[:, 0]
+            aux_df["UMAP_2"] = self.umap_combined.embedding_[:, 1]
+            aux_df["UMAP_3"] = self.umap_combined.embedding_[:, 2]
+
+            if "Cluster" not in aux_df.columns:
+                aux_df["Cluster"] = self.hdbscan_.labels_
+                
+            aux_df["Cluster"] = aux_df["Cluster"].astype("str")
+            custom_columns = [c for c in aux_df.columns if c not in ["UMAP_1", "UMAP_2", "UMAP_3"]]
+            custom_hover = [f"{c}: %{{customdata[{i}]}}" for i, c in enumerate(custom_columns)]
+
+            fig = px.scatter_3d(aux_df, x = "UMAP_1", y = "UMAP_2", z = "UMAP_3",
+                         color = "Cluster",
+                        custom_data = custom_columns, height=800, width=800)
+            fig.update_traces(
+                hovertemplate="<br>".join(custom_hover)
+                )
+            return fig
+            
+        else:
+            print("This function needs at least 3 dimensions.")
 
 
 
